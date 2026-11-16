@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Self-contained visual guide for Module 02. Open this file in any browser; it works offline
+     (fonts fall back to system fonts when there is no internet). -->
+<title>Terraform Azure Login Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a field manual. Sticky contents rail on wide screens, one reading column, diagrams wider than text. */
+:root {
+  --paper: #f5f7f9;
+  --sheet: #ffffff;
+  --ink: #16202b;
+  --muted: #566476;
+  --line: #d6dde6;
+  --accent: #0b6a86;
+  --accent-soft: #e2f1f5;
+  --secret: #b8430d;
+  --secret-soft: #fbeee6;
+  --ok: #1d7a43;
+  --ok-soft: #e4f3ea;
+  --deny: #b42318;
+  --deny-soft: #fbe9e7;
+  --code-bg: #eef2f6;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e141b; --sheet: #151d26; --ink: #e5ebf1; --muted: #9aa8b8; --line: #2a3644;
+    --accent: #5cb8d3; --accent-soft: #12303a; --secret: #f0915a; --secret-soft: #3a2216;
+    --ok: #5fd08e; --ok-soft: #12301f; --deny: #f2857a; --deny-soft: #3a1714; --code-bg: #1b2531;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e141b; --sheet: #151d26; --ink: #e5ebf1; --muted: #9aa8b8; --line: #2a3644;
+  --accent: #5cb8d3; --accent-soft: #12303a; --secret: #f0915a; --secret-soft: #3a2216;
+  --ok: #5fd08e; --ok-soft: #12301f; --deny: #f2857a; --deny-soft: #3a1714; --code-bg: #1b2531;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page { max-width: 1180px; margin: 0 auto; padding-block: 40px 80px; display: grid; gap: 48px; }
+@media (min-width: 1000px) { .page { grid-template-columns: 220px minmax(0, 1fr); } }
+
+/* Contents rail */
+.rail { display: none; }
+@media (min-width: 1000px) {
+  .rail { display: block; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; }
+}
+.rail p { font: 600 12px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: s; }
+.rail a { display: flex; gap: 10px; padding: 6px 8px; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 14px; }
+.rail a::before { counter-increment: s; content: counter(s); font: 500 12px/1.9 var(--font-mono); color: var(--muted); min-width: 1.2em; }
+.rail a:hover, .rail a:focus-visible { background: var(--accent-soft); }
+
+main { min-width: 0; display: grid; gap: 64px; }
+section { display: grid; gap: 18px; min-width: 0; scroll-margin-top: 24px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 700; letter-spacing: -.01em; }
+h2 { font-size: clamp(25px, 3vw, 32px); font-weight: 600; }
+h3 { font-size: 19px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 600 12px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 19px; color: var(--muted); max-width: 60ch; }
+code, kbd { font-family: var(--font-mono); font-size: .9em; background: var(--code-bg); padding: .1em .35em; border-radius: 4px; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Hero */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.hero .meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 500 13px/1 var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--sheet); }
+
+/* Diagrams */
+.figure { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 20px; overflow-x: auto; }
+.figure svg { display: block; width: 100%; height: auto; min-width: 640px; }
+.figure figcaption { margin-top: 12px; font-size: 14px; color: var(--muted); }
+svg text { font-family: var(--font-body); fill: var(--ink); }
+svg .t-small { font-size: 12px; fill: var(--muted); }
+svg .t-mono { font-family: var(--font-mono); font-size: 12px; fill: var(--ink); }
+svg .t-head { font-family: var(--font-display); font-weight: 600; font-size: 16px; fill: var(--ink); }
+svg .t-step { font-family: var(--font-mono); font-size: 12px; font-weight: 500; fill: var(--sheet); }
+svg .box { fill: var(--sheet); stroke: var(--line); stroke-width: 1.5; }
+svg .box-accent { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+svg .box-secret { fill: var(--secret-soft); stroke: var(--secret); stroke-width: 1.5; }
+svg .box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+svg .box-deny { fill: var(--deny-soft); stroke: var(--deny); stroke-width: 1.5; stroke-dasharray: 5 4; }
+svg .wire { stroke: var(--accent); stroke-width: 2; fill: none; }
+svg .wire-back { stroke: var(--muted); stroke-width: 1.5; fill: none; stroke-dasharray: 4 4; }
+svg .wire-deny { stroke: var(--deny); stroke-width: 2; fill: none; }
+svg .dot { fill: var(--accent); }
+svg .dot-deny { fill: var(--deny); }
+svg .arrowhead { fill: var(--accent); }
+svg .arrowhead-muted { fill: var(--muted); }
+svg .arrowhead-deny { fill: var(--deny); }
+svg .t-ok { fill: var(--ok); font-weight: 600; font-size: 13px; }
+svg .t-deny { fill: var(--deny); font-weight: 600; font-size: 13px; }
+svg .t-secret { fill: var(--secret); font-family: var(--font-mono); font-size: 12px; }
+
+/* Two-question cards */
+.pair { display: grid; gap: 16px; }
+@media (min-width: 700px) { .pair { grid-template-columns: 1fr 1fr; } }
+.q { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 8px; align-content: start; }
+.q b { font-family: var(--font-display); font-size: 20px; font-weight: 600; }
+.q .tag { font: 600 11px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.q p { color: var(--muted); font-size: 15px; }
+
+/* Login methods */
+.methods { display: grid; gap: 14px; }
+@media (min-width: 760px) { .methods { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.method { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.method header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.method h3 { font-size: 18px; }
+.pill { font: 600 11px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--secret-soft); color: var(--secret); }
+.pill.info { background: var(--accent-soft); color: var(--accent); }
+.method dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
+.method dt { color: var(--muted); }
+.method dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 15px; max-width: 74ch; }
+.note.warn { border-color: var(--secret); background: var(--secret-soft); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 560px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 12px/1.3 var(--font-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td.role { font-weight: 600; white-space: nowrap; }
+.yes { color: var(--secret); font-weight: 600; }
+.no { color: var(--muted); }
+
+/* Steps */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: step; }
+.steps > li { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 14px; }
+.steps > li::before { counter-increment: step; content: counter(step); width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--paper); display: grid; place-items: center; font: 600 14px/1 var(--font-mono); }
+.steps .body { display: grid; gap: 10px; min-width: 0; }
+.steps .body > p { color: var(--ink); }
+
+/* Code with tabs */
+.code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.code .bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs { display: flex; gap: 4px; }
+.tabs button, .copy { font: 500 13px/1 var(--font-body); border: 1px solid transparent; background: transparent; color: var(--muted); padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--sheet); color: var(--ink); border-color: var(--line); }
+.copy { border-color: var(--line); background: var(--sheet); color: var(--ink); }
+.copy:hover { border-color: var(--accent); }
+pre { margin: 0; padding: 14px 16px; overflow-x: auto; font: 13.5px/1.6 var(--font-mono); color: var(--ink); white-space: pre; }
+pre .c { color: var(--muted); }
+pre .s { color: var(--secret); }
+pre .k { color: var(--accent); }
+
+/* JSON → env mapping */
+.mapping { display: grid; gap: 8px; }
+.map-row { display: grid; grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr); align-items: center; gap: 8px; }
+.map-row span { font: 13.5px/1.4 var(--font-mono); background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; overflow-wrap: anywhere; }
+.map-row .arrow { border: 0; background: none; text-align: center; color: var(--accent); padding: 0; }
+.map-row.secret span:last-child, .map-row.secret span:first-child { border-color: var(--secret); background: var(--secret-soft); }
+
+/* Before / after identity */
+.compare { display: grid; gap: 14px; }
+@media (min-width: 760px) { .compare { grid-template-columns: 1fr 1fr; } }
+.panel { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.panel h3 { font-size: 15px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.panel pre { background: transparent; }
+
+/* Build sequence */
+.build { display: grid; gap: 14px; }
+@media (min-width: 820px) { .build { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.stage { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.stage .k { font: 600 12px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.tree { font: 13.5px/1.7 var(--font-mono); background: var(--code-bg); border-radius: 6px; padding: 10px 12px; }
+.tree .new { color: var(--ok); font-weight: 500; }
+.planline { font: 500 13px/1 var(--font-mono); color: var(--ok); }
+.legend { display: grid; gap: 10px; }
+@media (min-width: 700px) { .legend { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.sym { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 6px; }
+.sym b { font: 600 22px/1 var(--font-mono); }
+.sym.add b { color: var(--ok); }
+.sym.upd b { color: var(--accent); }
+.sym.rep b, .sym.del b { color: var(--deny); }
+.sym span { font-size: 14px; color: var(--muted); }
+
+/* Error anatomy */
+.err { background: var(--sheet); border: 1px solid var(--deny); border-radius: 10px; padding: 16px; font: 13.5px/1.9 var(--font-mono); overflow-wrap: anywhere; }
+.err mark { background: none; color: inherit; border-bottom: 2px solid; padding-bottom: 1px; }
+.err mark.who { border-color: var(--accent); }
+.err mark.what { border-color: var(--secret); }
+.err mark.where { border-color: var(--ok); }
+.err-key { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; color: var(--muted); }
+.err-key i { font-style: normal; display: inline-block; width: 22px; height: 0; border-bottom: 3px solid; vertical-align: middle; margin-right: 6px; }
+
+.toast { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 8px; font-size: 14px; }
+footer { color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 18px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <nav class="rail" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#two-questions">Two questions</a></li>
+      <li><a href="#methods">Four ways to log in</a></li>
+      <li><a href="#spn">Inside a service principal</a></li>
+      <li><a href="#roles">Roles and scopes</a></li>
+      <li><a href="#create">Create one</a></li>
+      <li><a href="#prove">Prove who Terraform is</a></li>
+      <li><a href="#build">Build it step by step</a></li>
+      <li><a href="#errors">Read a permission error</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">Module 02 · Visual guide</span>
+      <h1>How Terraform logs in to Azure, and what it's allowed to build</h1>
+      <p class="lede">Terraform has no permissions of its own. It borrows them from an identity: you, or a service principal. This guide shows how that works, which role to give at which scope, and how to prove which identity ran.</p>
+      <div class="meta">
+        <span class="chip">azurerm ~&gt; 4.0</span>
+        <span class="chip">Terraform ≥ 1.9</span>
+        <span class="chip">Exam objectives 2a–2c, 3a–3g</span>
+      </div>
+    </header>
+
+    <!-- 1 -->
+    <section id="two-questions">
+      <span class="eyebrow">Part A.1</span>
+      <h2>Azure asks two questions on every request</h2>
+      <div class="pair">
+        <div class="q"><span class="tag">Authentication</span><b>Who are you?</b><p>Answered by an <strong>identity</strong> in Microsoft Entra ID: a user, a service principal or a managed identity. Like the ID badge you show at reception.</p></div>
+        <div class="q"><span class="tag">Authorization</span><b>What may you do, and where?</b><p>Answered by a <strong>role assignment</strong>: a role (what) on a scope (where). Like an access card programmed for certain floors.</p></div>
+      </div>
+      <figure class="figure" aria-label="Sequence: Terraform gets a token from Entra ID, then calls Azure Resource Manager">
+        <svg viewBox="0 0 880 300" role="img">
+          <defs>
+            <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="arrowhead-muted" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <!-- lanes -->
+          <rect class="box-accent" x="20" y="20" width="170" height="260" rx="10"/>
+          <text class="t-head" x="105" y="50" text-anchor="middle">terraform apply</text>
+          <text class="t-small" x="105" y="70" text-anchor="middle">CLI + azurerm provider</text>
+          <rect class="box" x="355" y="20" width="170" height="260" rx="10"/>
+          <text class="t-head" x="440" y="50" text-anchor="middle">Microsoft Entra ID</text>
+          <text class="t-small" x="440" y="70" text-anchor="middle">"Who are you?"</text>
+          <rect class="box" x="690" y="20" width="170" height="260" rx="10"/>
+          <text class="t-head" x="775" y="50" text-anchor="middle">Azure Resource</text>
+          <text class="t-head" x="775" y="70" text-anchor="middle">Manager (ARM)</text>
+          <text class="t-small" x="775" y="90" text-anchor="middle">"What may you do?"</text>
+          <!-- 1 credentials -->
+          <line class="wire" x1="190" y1="112" x2="353" y2="112" marker-end="url(#a1)"/>
+          <circle class="dot" cx="272" cy="112" r="11"/><text class="t-step" x="272" y="116" text-anchor="middle">1</text>
+          <text class="t-small" x="272" y="100" text-anchor="middle">credentials</text>
+          <!-- 2 token -->
+          <line class="wire-back" x1="353" y1="152" x2="192" y2="152" marker-end="url(#a2)"/>
+          <text class="t-small" x="272" y="140" text-anchor="middle">2 · access token (~1 hour)</text>
+          <!-- 3 request -->
+          <path class="wire" d="M190,200 L688,200" marker-end="url(#a1)"/>
+          <circle class="dot" cx="440" cy="200" r="11"/><text class="t-step" x="440" y="204" text-anchor="middle">3</text>
+          <text class="t-small" x="440" y="188" text-anchor="middle">"create storage account" + token</text>
+          <!-- 4 result -->
+          <line class="wire-back" x1="688" y1="245" x2="192" y2="245" marker-end="url(#a2)"/>
+          <text class="t-small" x="440" y="236" text-anchor="middle">4 · result</text>
+          <text class="t-ok" x="705" y="132">✔ Contributor on</text>
+          <text class="t-ok" x="705" y="150">rg-dg-lab02: allowed</text>
+          <text class="t-deny" x="705" y="268">✘ AuthorizationFailed</text>
+        </svg>
+        <figcaption>Steps 1–2 answer "who are you?". Steps 3–4 answer "what may you do, where?". Terraform repeats step 3 for every resource.</figcaption>
+      </figure>
+    </section>
+
+    <!-- 2 -->
+    <section id="methods">
+      <span class="eyebrow">Part A.2</span>
+      <h2>Four ways Terraform can log in</h2>
+      <p>The azurerm provider uses whichever method you configure through <code>ARM_*</code> environment variables. If nothing is configured, it falls back to your <code>az login</code>.</p>
+      <div class="methods">
+        <article class="method">
+          <header><h3>Azure CLI (<code>az login</code>)</h3><span class="pill info">Learning</span></header>
+          <dl><dt>Terraform is</dt><dd>You, with your own permissions</dd><dt>Set</dt><dd><code>ARM_SUBSCRIPTION_ID</code></dd><dt>Course</dt><dd>Modules 02–11</dd></dl>
+        </article>
+        <article class="method">
+          <header><h3>Service principal + secret</h3><span class="pill warn">Has a secret</span></header>
+          <dl><dt>Terraform is</dt><dd>A robot account (app identity)</dd><dt>Set</dt><dd><code>ARM_CLIENT_ID</code> <code>ARM_CLIENT_SECRET</code> <code>ARM_TENANT_ID</code> <code>ARM_SUBSCRIPTION_ID</code></dd><dt>Course</dt><dd>Lab 2.2</dd></dl>
+        </article>
+        <article class="method">
+          <header><h3>Managed identity</h3><span class="pill ok">No secret</span></header>
+          <dl><dt>Terraform is</dt><dd>The identity Azure gives a VM, container or build agent</dd><dt>Set</dt><dd><code>ARM_USE_MSI=true</code> (+ <code>ARM_CLIENT_ID</code> if user-assigned)</dd><dt>Course</dt><dd>Module 08</dd></dl>
+        </article>
+        <article class="method">
+          <header><h3>OIDC federation</h3><span class="pill ok">No secret</span></header>
+          <dl><dt>Terraform is</dt><dd>A service principal that trusts GitHub, Azure DevOps or HCP Terraform</dd><dt>Set</dt><dd><code>ARM_USE_OIDC=true</code> <code>ARM_CLIENT_ID</code> <code>ARM_TENANT_ID</code> <code>ARM_SUBSCRIPTION_ID</code></dd><dt>Course</dt><dd>Modules 12, 15</dd></dl>
+        </article>
+      </div>
+      <p class="note warn"><strong>Golden rule:</strong> never write a secret in a <code>.tf</code> or <code>.tfvars</code> file. A forgotten <code>ARM_CLIENT_SECRET</code> in your terminal also silently changes who Terraform is, so check it with <code>whoami.tf</code> (section 6).</p>
+    </section>
+
+    <!-- 3 -->
+    <section id="spn">
+      <span class="eyebrow">Part A.3</span>
+      <h2>What's inside a service principal</h2>
+      <p><code>az ad sp create-for-rbac</code> creates three linked objects. Knowing which ID is which saves hours of debugging.</p>
+      <figure class="figure" aria-label="App registration, service principal and role assignment">
+        <svg viewBox="0 0 880 320" role="img">
+          <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+          <rect class="box" x="20" y="30" width="260" height="190" rx="10"/>
+          <text class="t-head" x="40" y="62">App registration</text>
+          <text class="t-small" x="40" y="82">the definition of the app</text>
+          <text class="t-mono" x="40" y="118">appId (client ID)</text>
+          <text class="t-small" x="40" y="136">→ ARM_CLIENT_ID · not secret</text>
+          <rect class="box-secret" x="36" y="152" width="228" height="52" rx="6"/>
+          <text class="t-secret" x="50" y="174">client secret  Xy8Q~…</text>
+          <text class="t-small" x="50" y="192">→ ARM_CLIENT_SECRET · shown once</text>
+
+          <line class="wire" x1="280" y1="125" x2="328" y2="125" marker-end="url(#a3)"/>
+
+          <rect class="box" x="330" y="30" width="230" height="190" rx="10"/>
+          <text class="t-head" x="350" y="62">Service principal</text>
+          <text class="t-small" x="350" y="82">the account in YOUR tenant</text>
+          <text class="t-mono" x="350" y="118">object ID</text>
+          <text class="t-small" x="350" y="136">used in role assignments</text>
+          <text class="t-mono" x="350" y="172">tenant ID</text>
+          <text class="t-small" x="350" y="190">→ ARM_TENANT_ID</text>
+
+          <line class="wire" x1="560" y1="125" x2="608" y2="125" marker-end="url(#a3)"/>
+
+          <rect class="box-accent" x="610" y="30" width="250" height="190" rx="10"/>
+          <text class="t-head" x="630" y="62">Role assignment</text>
+          <text class="t-small" x="630" y="82">what it may do, and where</text>
+          <text class="t-mono" x="630" y="118">role:  Contributor</text>
+          <text class="t-mono" x="630" y="148">scope: /subscriptions/…</text>
+          <text class="t-mono" x="630" y="166">  /resourceGroups/</text>
+          <text class="t-mono" x="630" y="184">  rg-dg-lab02</text>
+
+          <text class="t-small" x="20" y="262">Plus, on every run:</text>
+          <rect class="box" x="20" y="272" width="260" height="34" rx="6"/>
+          <text class="t-mono" x="34" y="294">ARM_SUBSCRIPTION_ID = where to deploy</text>
+        </svg>
+        <figcaption>The client ID, tenant ID and subscription ID are identifiers, not secrets. Only the client secret (or certificate) must be protected.</figcaption>
+      </figure>
+    </section>
+
+    <!-- 4 -->
+    <section id="roles">
+      <span class="eyebrow">Part A.4</span>
+      <h2>Roles and scopes: the smallest key that opens the right door</h2>
+      <p>A role applies at a scope, and everything below that scope inherits it. Lab 2.2 gives the service principal Reader on the subscription and Contributor on one resource group only.</p>
+      <figure class="figure" aria-label="Nested scopes showing where the service principal is allowed and denied">
+        <svg viewBox="0 0 880 380" role="img">
+          <rect class="box" x="20" y="20" width="840" height="340" rx="12"/>
+          <text class="t-head" x="40" y="50">Management group</text>
+          <text class="t-small" x="190" y="50">e.g. Contoso-NonProd · roles here flow to every subscription</text>
+
+          <rect class="box" x="40" y="70" width="800" height="270" rx="10"/>
+          <text class="t-head" x="60" y="100">Subscription</text>
+          <rect class="box-accent" x="660" y="82" width="160" height="28" rx="14"/>
+          <text class="t-mono" x="740" y="101" text-anchor="middle">SPN: Reader</text>
+
+          <rect class="box-ok" x="60" y="125" width="420" height="195" rx="10"/>
+          <text class="t-head" x="80" y="155">Resource group  rg-dg-lab02</text>
+          <rect class="box-accent" x="290" y="137" width="172" height="28" rx="14"/>
+          <text class="t-mono" x="376" y="156" text-anchor="middle">SPN: Contributor</text>
+          <rect class="box" x="80" y="180" width="380" height="56" rx="8"/>
+          <text class="t-mono" x="96" y="204">storage account  stdglab02…</text>
+          <text class="t-small" x="96" y="224">inherits Contributor from the resource group</text>
+          <text class="t-ok" x="80" y="268">✔ create · change · delete inside</text>
+          <text class="t-ok" x="80" y="290">✔ read everything (Reader from above)</text>
+
+          <rect class="box-deny" x="500" y="125" width="320" height="195" rx="10"/>
+          <text class="t-head" x="520" y="155">rg-dg-outside</text>
+          <text class="t-small" x="520" y="176">only Reader reaches here</text>
+          <text class="t-ok" x="520" y="214">✔ read</text>
+          <text class="t-deny" x="520" y="240">✘ create or change anything</text>
+          <text class="t-deny" x="520" y="266">✘ create new resource groups</text>
+          <text class="t-small" x="520" y="292">(needs write at subscription scope)</text>
+        </svg>
+        <figcaption>Permissions flow down. Grant at the lowest scope that works: resource before resource group, before subscription, before management group.</figcaption>
+      </figure>
+
+      <h3>Built-in roles you'll meet in this course</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Role</th><th>Can do</th><th>Can grant access?</th><th>Give it to Terraform when…</th></tr></thead>
+          <tbody>
+            <tr><td class="role">Reader</td><td>Read everything</td><td class="no">No</td><td>Plans only, drift detection, data sources</td></tr>
+            <tr><td class="role">Contributor</td><td>Create, change, delete resources</td><td class="no">No</td><td>Most deployments (the usual choice)</td></tr>
+            <tr><td class="role">User Access Administrator</td><td>Manage role assignments only</td><td class="yes">Yes</td><td>The code creates <code>azurerm_role_assignment</code></td></tr>
+            <tr><td class="role">RBAC Administrator</td><td>Manage role assignments, limited by conditions</td><td class="yes">Yes, limited</td><td>The safer production choice for the row above</td></tr>
+            <tr><td class="role">Owner</td><td>Everything, including access</td><td class="yes">Yes</td><td>Avoid for automation</td></tr>
+            <tr><td class="role">Storage Blob Data Contributor</td><td>Read and write blobs (data plane)</td><td class="no">No</td><td>Remote state with Entra auth (Module 06)</td></tr>
+            <tr><td class="role">Key Vault Secrets Officer</td><td>Read and write secrets (data plane)</td><td class="no">No</td><td>Terraform writes Key Vault secrets (Module 10)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note"><strong>Management plane vs data plane.</strong> Contributor can create a storage account or Key Vault, but cannot read the blobs or secrets inside it. Data access needs a data role such as Storage Blob Data Contributor.</p>
+
+      <h3>What each part of the course needs</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Course part</th><th>Roles for Terraform's identity</th><th>Scope</th></tr></thead>
+          <tbody>
+            <tr><td>Modules 02–05, 07–09, 11</td><td>Contributor</td><td>Subscription or resource group</td></tr>
+            <tr><td>Module 06 · remote state</td><td>+ Storage Blob Data Contributor</td><td>State storage account</td></tr>
+            <tr><td>Modules 08, 10 · identities, Key Vault</td><td>+ User Access Administrator or RBAC Administrator, + Key Vault Secrets Officer</td><td>Subscription, Key Vault</td></tr>
+            <tr><td>Modules 10, 12, 15 · Entra groups and apps</td><td>Permission to create groups and app registrations</td><td>Entra ID tenant</td></tr>
+            <tr><td>Lab 2.2 · this module</td><td>Reader + Contributor</td><td>Subscription + <code>rg-&lt;you&gt;-lab02</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section id="create">
+      <span class="eyebrow">Lab 2.2</span>
+      <h2>Create a least-privilege service principal</h2>
+      <p class="note">To create one you need two permissions: Entra ID lets you register applications (default for most users), <em>and</em> you are Owner, User Access Administrator or RBAC Administrator on the subscription. If not, your trainer creates it for you with the same script.</p>
+      <ol class="steps">
+        <li><div class="body">
+          <p><strong>Run the script</strong> from the course repository. It creates the service principal with Contributor on your lab resource group, then adds Reader on the subscription.</p>
+          <div class="code" data-tabs>
+            <div class="bar"><div class="tabs" role="tablist"><button role="tab" data-shell="ps" aria-selected="true">PowerShell</button><button role="tab" data-shell="sh" aria-selected="false">Bash</button></div><button class="copy" type="button">Copy</button></div>
+            <pre data-shell="ps">.\02-azure-first-deployment\labs\lab02-service-principal\create-spn.ps1 -Student dg</pre>
+            <pre data-shell="sh" hidden>./02-azure-first-deployment/labs/lab02-service-principal/create-spn.sh dg</pre>
+          </div>
+        </div></li>
+        <li><div class="body">
+          <p><strong>Or run the same commands by hand</strong> to see what happens:</p>
+          <div class="code" data-tabs>
+            <div class="bar"><div class="tabs" role="tablist"><button role="tab" data-shell="ps" aria-selected="true">PowerShell</button><button role="tab" data-shell="sh" aria-selected="false">Bash</button></div><button class="copy" type="button">Copy</button></div>
+<pre data-shell="ps"><span class="k">$SUB</span> = az account show --query id -o tsv
+<span class="c"># 1. App registration + service principal + secret + Contributor on ONE resource group</span>
+az ad sp create-for-rbac --name sp-tf-training-dg `
+  --role Contributor `
+  --scopes "/subscriptions/<span class="k">$SUB</span>/resourceGroups/rg-dg-lab02" --years 1
+<span class="c"># 2. Reader on the whole subscription</span>
+az role assignment create --assignee <span class="s">&lt;appId&gt;</span> --role Reader --scope "/subscriptions/<span class="k">$SUB</span>"</pre>
+<pre data-shell="sh" hidden><span class="k">SUB</span>=$(az account show --query id -o tsv)
+<span class="c"># 1. App registration + service principal + secret + Contributor on ONE resource group</span>
+az ad sp create-for-rbac --name sp-tf-training-dg \
+  --role Contributor \
+  --scopes "/subscriptions/<span class="k">$SUB</span>/resourceGroups/rg-dg-lab02" --years 1
+<span class="c"># 2. Reader on the whole subscription</span>
+az role assignment create --assignee <span class="s">&lt;appId&gt;</span> --role Reader --scope "/subscriptions/<span class="k">$SUB</span>"</pre>
+          </div>
+        </div></li>
+        <li><div class="body">
+          <p><strong>Map the output to environment variables.</strong> The secret is shown once, so copy it now.</p>
+          <div class="mapping" aria-label="JSON output field to environment variable">
+            <div class="map-row"><span>"appId": "0a1b2c3d-…"</span><span class="arrow">→</span><span>ARM_CLIENT_ID</span></div>
+            <div class="map-row secret"><span>"password": "Xy8Q~…"</span><span class="arrow">→</span><span>ARM_CLIENT_SECRET</span></div>
+            <div class="map-row"><span>"tenant": "72f988bf-…"</span><span class="arrow">→</span><span>ARM_TENANT_ID</span></div>
+            <div class="map-row"><span>az account show --query id</span><span class="arrow">→</span><span>ARM_SUBSCRIPTION_ID</span></div>
+          </div>
+        </div></li>
+        <li><div class="body">
+          <p><strong>Set them in the terminal where you run Terraform</strong>, and only there. Closing the window removes them.</p>
+          <div class="code" data-tabs>
+            <div class="bar"><div class="tabs" role="tablist"><button role="tab" data-shell="ps" aria-selected="true">PowerShell</button><button role="tab" data-shell="sh" aria-selected="false">Bash</button></div><button class="copy" type="button">Copy</button></div>
+<pre data-shell="ps">$env:ARM_CLIENT_ID       = "<span class="s">&lt;appId&gt;</span>"
+$env:ARM_CLIENT_SECRET   = "<span class="s">&lt;password&gt;</span>"
+$env:ARM_TENANT_ID       = "<span class="s">&lt;tenant&gt;</span>"
+$env:ARM_SUBSCRIPTION_ID = "<span class="s">&lt;subscription id&gt;</span>"</pre>
+<pre data-shell="sh" hidden>export ARM_CLIENT_ID="<span class="s">&lt;appId&gt;</span>"
+export ARM_CLIENT_SECRET="<span class="s">&lt;password&gt;</span>"
+export ARM_TENANT_ID="<span class="s">&lt;tenant&gt;</span>"
+export ARM_SUBSCRIPTION_ID="<span class="s">&lt;subscription id&gt;</span>"</pre>
+          </div>
+        </div></li>
+        <li><div class="body">
+          <p><strong>Clean up when you're done:</strong> clear the variables, <code>az login</code> again, <code>terraform destroy</code>, then run <code>delete-spn.ps1</code> / <code>delete-spn.sh</code>. It removes the role assignments first, then the app.</p>
+        </div></li>
+      </ol>
+    </section>
+
+    <!-- 6 -->
+    <section id="prove">
+      <span class="eyebrow">Lab 2.1 step 6 · Lab 2.2 step 3</span>
+      <h2>Prove which identity Terraform used</h2>
+      <p><code>whoami.tf</code> outputs the <code>azurerm_client_config</code> data source. Run <code>terraform output terraform_identity</code> before and after setting the variables.</p>
+      <div class="compare">
+        <div class="panel"><h3>With <code>az login</code> (you)</h3>
+<pre>{
+  "client_id" = "<span class="k">04b07795-8ddb-461a-bbee-02f9e1bf7b46</span>"
+  "object_id" = "&lt;your user's object ID&gt;"
+}
+<span class="c"># 04b07795-… is the Azure CLI's own app ID:
+# you are logged in as a USER</span></pre></div>
+        <div class="panel"><h3>With <code>ARM_CLIENT_*</code> set (the robot)</h3>
+<pre>{
+  "client_id" = "<span class="k">0a1b2c3d-…</span>"
+  "object_id" = "&lt;the service principal's object ID&gt;"
+}
+<span class="c"># the service principal's appId:
+# Terraform now has ONLY its roles</span></pre></div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section id="build">
+      <span class="eyebrow">Lab 2.1</span>
+      <h2>Build it one resource at a time</h2>
+      <p>Add one resource, run <code>terraform plan</code>, read it, apply. Then the next resource. References such as <code>azurerm_resource_group.main.name</code> tell Terraform the order.</p>
+      <div class="build">
+        <div class="stage"><span class="k">Step 3</span><h3>Resource group</h3>
+          <div class="tree"><span class="new">+ rg-dg-lab02</span></div>
+          <span class="planline">Plan: 1 to add</span></div>
+        <div class="stage"><span class="k">Step 4</span><h3>+ Storage account</h3>
+          <div class="tree">rg-dg-lab02<br><span class="new">+ └ stdglab02k3x9pq</span><br><span class="new">+ random suffix</span></div>
+          <span class="planline">Plan: 2 to add</span></div>
+        <div class="stage"><span class="k">Step 5</span><h3>+ Container</h3>
+          <div class="tree">rg-dg-lab02<br>&nbsp;└ stdglab02k3x9pq<br><span class="new">+ &nbsp;&nbsp;└ data</span></div>
+          <span class="planline">Plan: 1 to add</span></div>
+      </div>
+      <h3>Read every plan for these symbols</h3>
+      <div class="legend">
+        <div class="sym add"><b>+</b><span>Create a new resource</span></div>
+        <div class="sym upd"><b>~</b><span>Update in place: the resource stays (step 8)</span></div>
+        <div class="sym rep"><b>-/+</b><span>Replace: delete, then create. Data loss risk (step 9)</span></div>
+        <div class="sym del"><b>-</b><span>Destroy</span></div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section id="errors">
+      <span class="eyebrow">Troubleshooting</span>
+      <h2>Read a permission error in three parts</h2>
+      <p>Every Azure authorization error tells you who was refused, what they tried, and where. This is the real error from Lab 2.2 step 5:</p>
+      <div class="err">Error: creating Resource Group "rg-dg-outside": AuthorizationFailed: The client '<mark class="who">0a1b2c3d-…</mark>' with object id '…' does not have authorization to perform action '<mark class="what">Microsoft.Resources/subscriptions/resourcegroups/write</mark>' over scope '<mark class="where">/subscriptions/…/resourceGroups/rg-dg-outside</mark>'</div>
+      <div class="err-key"><span><i style="border-color: var(--accent)"></i>Who: the client ID</span><span><i style="border-color: var(--secret)"></i>What: the action refused</span><span><i style="border-color: var(--ok)"></i>Where: the scope</span></div>
+      <p>The fix is always the same shape: give <em>who</em> a role that contains <em>what</em>, at <em>where</em> or a scope above it. Or decide the identity shouldn't do it at all.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Message contains</th><th>Meaning</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr><td><code>subscription ID could not be determined</code></td><td>azurerm 4 needs a subscription</td><td>Set <code>ARM_SUBSCRIPTION_ID</code></td></tr>
+            <tr><td><code>AADSTS7000215</code></td><td>Invalid client secret</td><td><code>az ad sp credential reset --id &lt;appId&gt;</code></td></tr>
+            <tr><td><code>AADSTS7000222</code></td><td>Client secret expired</td><td>Rotate it, or move to OIDC</td></tr>
+            <tr><td><code>AADSTS700016</code></td><td>App not found in this tenant</td><td>Check <code>ARM_CLIENT_ID</code> and <code>ARM_TENANT_ID</code></td></tr>
+            <tr><td><code>not registered to use namespace</code></td><td>Resource provider not registered</td><td><code>az provider register -n Microsoft.Storage</code>, or <code>resource_provider_registrations = "none"</code> for limited identities</td></tr>
+            <tr><td><code>403 … not authorized</code> on blobs</td><td>Management role, no data role</td><td>Storage Blob Data Contributor, or <code>--auth-mode key</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>Terraform on Azure, Beginner to Expert · Module 02. Step-by-step instructions are in <code>02-azure-first-deployment/README.md</code>.</footer>
+  </main>
+</div>
+<div class="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  var KEY = 'tf-guide-shell';
+  var shell = 'ps';
+  try { shell = localStorage.getItem(KEY) || 'ps'; } catch (e) {}
+
+  function setShell(value) {
+    shell = value;
+    document.querySelectorAll('[data-tabs]').forEach(function (box) {
+      box.querySelectorAll('.tabs button').forEach(function (b) {
+        b.setAttribute('aria-selected', String(b.dataset.shell === value));
+      });
+      box.querySelectorAll('pre[data-shell]').forEach(function (p) {
+        p.hidden = p.dataset.shell !== value;
+      });
+    });
+    try { localStorage.setItem(KEY, value); } catch (e) {}
+  }
+
+  var toast = document.querySelector('.toast');
+  var timer;
+  function say(msg) {
+    toast.textContent = msg;
+    toast.hidden = false;
+    clearTimeout(timer);
+    timer = setTimeout(function () { toast.hidden = true; }, 1800);
+  }
+
+  document.querySelectorAll('[data-tabs]').forEach(function (box) {
+    box.querySelectorAll('.tabs button').forEach(function (b) {
+      b.addEventListener('click', function () { setShell(b.dataset.shell); });
+    });
+    box.querySelector('.copy').addEventListener('click', function () {
+      var pre = box.querySelector('pre:not([hidden])');
+      var text = pre.innerText;
+      function select() {
+        var range = document.createRange();
+        range.selectNodeContents(pre);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        say('Selected. Press Ctrl+C to copy');
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { say('Copied'); }, select);
+      } else { select(); }
+    });
+  });
+
+  setShell(shell);
+})();
+</script>
+
+</body>
+</html>

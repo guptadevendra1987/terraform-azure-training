@@ -1,0 +1,5 @@
+# Every change needs a platform-team review; network and policy changes need a second, specialist review.
+*                         @contoso/platform-engineering
+/modules/hub-network/     @contoso/platform-engineering @contoso/network-team
+/modules/spoke-network/   @contoso/platform-engineering @contoso/network-team
+/env/prod*                @contoso/platform-engineering @contoso/platform-leads

@@ -1,0 +1,10 @@
+student            = "dg"
+environment        = "prod"
+location           = "southindia"
+address_space      = "10.120.0.0/16"
+enable_delete_lock = true
+subnets = {
+  web  = { netnum = 1 }
+  app  = { netnum = 2 }
+  data = { netnum = 3 }
+}

@@ -1,0 +1,22 @@
+student           = "dg"
+environment       = "dev"
+location          = "centralindia"
+hub_address_space = "10.200.0.0/16"
+enable_firewall   = false
+
+spokes = {
+  web = {
+    address_space = "10.201.0.0/16"
+    subnets = {
+      app = { netnum = 1, delegation = "Microsoft.Web/serverFarms" }
+      pe  = { netnum = 2 }
+    }
+  }
+  data = {
+    address_space = "10.202.0.0/16"
+    subnets = {
+      app = { netnum = 1 }
+      pe  = { netnum = 2 }
+    }
+  }
+}

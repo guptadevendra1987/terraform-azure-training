@@ -1,0 +1,11 @@
+#cloud-config
+hostname: ${hostname}
+package_update: true
+packages:
+%{ for p in packages ~}
+  - ${p}
+%{ endfor ~}
+write_files:
+  - path: /etc/app/config.json
+    content: |
+      ${indent(6, config_json)}

@@ -1,0 +1,6 @@
+name,role,size,environment,zone,disk_gb,owner_email
+web01,web,Standard_B2s,prod,1,64,Priya.Sharma@Contoso.com
+web02,web,Standard_B2s,prod,2,64,Priya.Sharma@Contoso.com
+app01,app,Standard_B2ms,prod,1,128,  rahul.verma@contoso.com
+app02,app,Standard_B2ms,dev,,,rahul.verma@contoso.com
+db01,db,Standard_D4s_v5,prod,3,512,dba-team@contoso.com

@@ -1,0 +1,22 @@
+vnets:
+  hub:
+    address_space: 10.100.0.0/16
+    subnets:
+      AzureFirewallSubnet: { cidr: 10.100.0.0/26 }
+      shared:
+        cidr: 10.100.1.0/24
+        rules:
+          - { name: allow-ssh-from-corp, priority: 100, port: "22", source: 203.0.113.0/24 }
+  spoke1:
+    address_space: 10.101.0.0/16
+    subnets:
+      web:
+        cidr: 10.101.1.0/24
+        rules:
+          - { name: allow-https, priority: 100, port: "443", source: Internet }
+          - { name: allow-http, priority: 110, port: "80", source: Internet }
+      app: { cidr: 10.101.2.0/24 }
+  spoke2:
+    address_space: 10.102.0.0/16
+    subnets:
+      app: { cidr: 10.102.1.0/24 }

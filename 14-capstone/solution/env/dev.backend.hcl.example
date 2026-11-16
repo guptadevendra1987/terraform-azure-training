@@ -1,0 +1,5 @@
+resource_group_name  = "rg-dg-tfstate"
+storage_account_name = "stdgtfstateXXXXX"
+container_name       = "tfstate"
+key                  = "capstone/dev.tfstate"
+use_azuread_auth     = true

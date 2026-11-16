@@ -1,0 +1,50 @@
+# Nightly drift detection: plan against prod and open an issue if reality differs from code.
+name: terraform-drift
+
+on:
+  schedule:
+    - cron: "30 1 * * *"   # 07:00 IST
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+env:
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: "true"
+  TF_INPUT: "false"
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    environment: prod-readonly   # federated credential subject: environment:prod-readonly, Reader role
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.2"
+          terraform_wrapper: false
+      - run: terraform init -backend-config=env/prod/backend.hcl
+      - id: plan
+        run: |
+          set +e
+          terraform plan -var-file=env/prod/terraform.tfvars -detailed-exitcode -no-color -lock=false > drift.txt
+          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+      - if: steps.plan.outputs.exitcode == '2'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('infra/drift.txt', 'utf8');
+            await github.rest.issues.create({ ...context.repo,
+              title: `Drift detected in prod (${new Date().toISOString().slice(0,10)})`,
+              body: "```\n" + plan.slice(0, 60000) + "\n```", labels: ["drift"] });
+      - if: steps.plan.outputs.exitcode == '1'
+        run: exit 1

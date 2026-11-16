@@ -1,0 +1,62 @@
+# Terraform CI/CD on Azure DevOps with a Workload Identity Federation service connection (no secret).
+# Prerequisites:
+#   - Service connections "sc-terraform-dev" / "sc-terraform-prod" (Azure Resource Manager → Workload identity federation)
+#   - Environments "dev" and "prod" (add Approvals & checks on prod)
+trigger:
+  branches:
+    include: [main]
+  paths:
+    include: [infra/*]
+
+pr:
+  branches:
+    include: [main]
+
+variables:
+  tfVersion: "1.17.2"
+  workingDir: "$(System.DefaultWorkingDirectory)/infra"
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Validate
+    jobs:
+      - job: static
+        steps:
+          - script: |
+              curl -sLo tf.zip https://releases.hashicorp.com/terraform/$(tfVersion)/terraform_$(tfVersion)_linux_amd64.zip
+              sudo unzip -o tf.zip -d /usr/local/bin && terraform version
+            displayName: Install Terraform
+          - script: |
+              terraform fmt -check -recursive
+              terraform init -backend=false
+              terraform validate
+            workingDirectory: $(workingDir)
+            displayName: fmt + validate
+          - script: |
+              pip install checkov
+              checkov -d . --framework terraform --quiet --output junitxml > checkov.xml || true
+              checkov -d . --framework terraform --quiet
+            workingDirectory: $(workingDir)
+            displayName: checkov
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: "$(workingDir)/checkov.xml"
+
+  - template: templates/terraform-stage.yml
+    parameters:
+      environment: dev
+      serviceConnection: sc-terraform-dev
+      dependsOn: Validate
+      applyEnabled: ${{ ne(variables['Build.Reason'], 'PullRequest') }}
+
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+      - template: templates/terraform-stage.yml
+        parameters:
+          environment: prod
+          serviceConnection: sc-terraform-prod
+          dependsOn: Deploy_dev
+          applyEnabled: true

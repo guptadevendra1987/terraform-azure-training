@@ -1,0 +1,22 @@
+# Every azurerm_resource_group being created or updated must carry a non-empty "owner" tag.
+import "tfplan/v2" as tfplan
+
+resource_groups = filter tfplan.resource_changes as _, rc {
+	rc.type is "azurerm_resource_group" and
+	(rc.change.actions contains "create" or rc.change.actions contains "update")
+}
+
+has_owner_tag = func(rc) {
+	tags = rc.change.after.tags else {}
+	return "owner" in keys(tags) and length(tags["owner"]) > 0
+}
+
+violations = filter resource_groups as address, rc {
+	not has_owner_tag(rc)
+}
+
+print("Resource groups missing an owner tag:", keys(violations))
+
+main = rule {
+	length(violations) is 0
+}

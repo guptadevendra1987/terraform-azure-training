@@ -1,0 +1,17 @@
+# Lab 2.2, step 6: prove least privilege.
+# Copy this file into your lab02 folder as scope-test.tf and run terraform plan / apply
+# while logged in as the service principal.
+#
+# Expected: the apply FAILS with
+#   AuthorizationFailed: The client '<appId>' ... does not have authorization to perform action
+#   'Microsoft.Resources/subscriptions/resourcegroups/write' over scope '/subscriptions/.../resourceGroups/rg-dg-outside'
+#
+# Why: the service principal is Contributor on rg-dg-lab02 ONLY. Creating a new resource group
+# needs write permission at SUBSCRIPTION scope, and it only has Reader there.
+#
+# Delete scope-test.tf afterwards.
+
+resource "azurerm_resource_group" "outside_my_scope" {
+  name     = "rg-dg-outside"
+  location = "centralindia"
+}

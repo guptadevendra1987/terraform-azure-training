@@ -1,0 +1,15 @@
+student           = "dg"
+environment       = "prod"
+location          = "southindia"
+hub_address_space = "10.210.0.0/16"
+enable_firewall   = true # Azure Firewall Basic: costs money. Destroy promptly after the demo.
+
+spokes = {
+  web = {
+    address_space = "10.211.0.0/16"
+    subnets = {
+      app = { netnum = 1, delegation = "Microsoft.Web/serverFarms" }
+      pe  = { netnum = 2 }
+    }
+  }
+}

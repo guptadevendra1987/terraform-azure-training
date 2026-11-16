@@ -1,0 +1,9 @@
+{
+  "version": "2026-11-01",
+  "approved_by": "security-team",
+  "rules": [
+    { "name": "allow-https", "port": 443, "sources": ["Internet"] },
+    { "name": "allow-ssh-vpn", "port": 22, "sources": ["10.250.0.0/16", "10.251.0.0/16"] },
+    { "name": "allow-sql-app", "port": 1433, "sources": ["10.20.2.0/24"] }
+  ]
+}

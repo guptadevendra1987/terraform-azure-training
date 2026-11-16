@@ -1,0 +1,10 @@
+defaults:
+  log_level: info
+  replicas: 1
+  feature_flags: [new-checkout]
+environments:
+  dev:
+    log_level: debug
+  prod:
+    replicas: 3
+    feature_flags: [new-checkout, fraud-detection]

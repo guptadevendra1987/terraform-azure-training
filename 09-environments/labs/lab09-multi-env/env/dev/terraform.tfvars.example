@@ -1,0 +1,8 @@
+student       = "dg"
+environment   = "dev"
+location      = "centralindia"
+address_space = "10.110.0.0/16"
+subnets = {
+  web = { netnum = 1 }
+  app = { netnum = 2 }
+}

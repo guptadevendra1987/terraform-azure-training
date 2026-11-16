@@ -1,0 +1,17 @@
+#cloud-config
+hostname: ${hostname}
+package_update: true
+packages:
+%{ for p in packages ~}
+  - ${p}
+%{ endfor ~}
+write_files:
+  - path: /var/www/html/index.html
+    permissions: "0644"
+    content: |
+      <html><body style="font-family:sans-serif">
+      <h1>Hello from ${hostname}</h1>
+      <p>Deployed by Terraform for ${owner}</p>
+      </body></html>
+runcmd:
+  - systemctl enable --now nginx

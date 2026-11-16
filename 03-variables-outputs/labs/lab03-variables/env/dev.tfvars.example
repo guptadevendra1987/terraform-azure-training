@@ -1,0 +1,8 @@
+environment = "dev"
+storage = {
+  containers     = ["data", "logs"]
+  retention_days = 7
+}
+extra_tags = {
+  cost_center = "training-001"
+}
